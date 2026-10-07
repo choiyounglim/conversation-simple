@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>토마토 마을</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game" aria-label="마을 지도. 방향키로 이동, E로 상호작용"></canvas>
+
+  <div id="hud">
+    <div id="title" class="chip"></div>
+    <button id="menuBtn" class="chip btn" title="마을 안내도">📜 안내도</button>
+  </div>
+
+  <div id="hint" class="chip">WASD / 방향키로 이동 · E / 스페이스로 상호작용 · 클릭하면 그곳으로 이동</div>
+
+  <div id="dialog" class="box hidden" role="dialog" aria-live="polite">
+    <div class="dlg-name"></div>
+    <div class="dlg-text"></div>
+    <div class="dlg-next">▼</div>
+  </div>
+
+  <div id="overlay" class="hidden">
+    <div id="panel" class="box" role="dialog" aria-modal="true">
+      <div class="panel-head">
+        <span class="panel-title"></span>
+        <button class="panel-close btn" aria-label="닫기">✕</button>
+      </div>
+      <div class="panel-body"></div>
+    </div>
+  </div>
+
+  <div id="menu" class="hidden">
+    <div class="box">
+      <div class="panel-head"><span class="panel-title">📜 마을 안내도</span><button class="panel-close btn" aria-label="닫기">✕</button></div>
+      <ul class="menu-list"></ul>
+    </div>
+  </div>
+
+  <div id="loading">마을로 가는 중...</div>
+  <pre id="debug" class="hidden"></pre>
+
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

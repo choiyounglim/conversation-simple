@@ -1,0 +1,83 @@
+:root {
+  --wood: #6b4423;
+  --wood-light: #a8743f;
+  --paper: #f6e7c8;
+  --paper-dark: #e7d1a4;
+  --ink: #3b2614;
+  --accent: #c8553d;
+  --font: 'Galmuri11', 'Galmuri9', 'Malgun Gothic', sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #1f3a24; font-family: var(--font); color: var(--ink); }
+canvas#game { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; touch-action: none; }
+.hidden { display: none !important; }
+
+/* 기본 나무+양피지 테두리. config.js 의 ui.panel 이 있으면 9-slice 이미지로 교체됨 */
+.box {
+  background: var(--paper);
+  border: 4px solid var(--wood);
+  box-shadow: inset 0 0 0 3px var(--wood-light), inset 0 0 0 5px var(--paper-dark), 0 6px 0 rgba(0,0,0,.35);
+  border-radius: 6px;
+  image-rendering: pixelated;
+}
+.box.skinned { border-style: solid; box-shadow: 0 6px 0 rgba(0,0,0,.35); background: transparent; border-radius: 0; }
+
+.chip {
+  background: rgba(40, 26, 14, .82); color: #fbeed2; border: 2px solid #c99a5b;
+  border-radius: 6px; padding: 6px 10px; font-size: 14px;
+}
+.btn { cursor: pointer; font-family: var(--font); }
+.btn:hover { filter: brightness(1.15); }
+
+#hud { position: fixed; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; pointer-events: none; gap: 8px; }
+#hud > * { pointer-events: auto; }
+#title { font-size: 16px; }
+
+#hint { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); text-align: center; transition: opacity 1s; max-width: calc(100vw - 32px); font-size: 13px; }
+#hint.fade { opacity: 0; pointer-events: none; }
+
+#dialog {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+  width: min(720px, calc(100vw - 32px)); min-height: 110px; padding: 16px 20px 22px; cursor: pointer;
+}
+.dlg-name {
+  position: absolute; top: -18px; left: 16px; background: var(--wood); color: #fbeed2;
+  padding: 4px 10px; border-radius: 4px; font-size: 14px;
+}
+.dlg-text { font-size: 17px; line-height: 1.6; white-space: pre-wrap; margin-top: 4px; }
+.dlg-next { position: absolute; right: 16px; bottom: 6px; font-size: 12px; animation: bob .6s infinite alternate; }
+@keyframes bob { to { transform: translateY(3px); } }
+
+#overlay, #menu { position: fixed; inset: 0; background: rgba(10, 16, 10, .55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+#panel, #menu .box { width: min(760px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; animation: pop .18s ease-out; }
+#menu .box { width: min(420px, 100%); }
+@keyframes pop { from { transform: scale(.92); opacity: 0; } }
+
+.panel-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 3px dashed var(--paper-dark); }
+.panel-title { font-size: 20px; }
+.panel-close { background: var(--wood); color: #fbeed2; border: 0; border-radius: 4px; width: 32px; height: 32px; font-size: 16px; }
+.panel-body { padding: 8px 20px 20px; overflow: auto; line-height: 1.7; font-size: 15px; }
+.panel-body h2 { font-size: 19px; margin: 12px 0 8px; }
+.panel-body h3 { font-size: 16px; margin: 0 0 4px; }
+.panel-body a { color: var(--accent); }
+.panel-body code { background: var(--paper-dark); padding: 1px 4px; border-radius: 3px; }
+.panel-body img { max-width: 100%; image-rendering: auto; }
+.panel-body .card { background: #fff6e2; border: 2px solid var(--paper-dark); border-radius: 6px; padding: 10px 14px; margin: 10px 0; }
+.panel-body .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.panel-body .thumb { aspect-ratio: 1; background: var(--paper-dark); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+
+.menu-list { list-style: none; margin: 0; padding: 8px; }
+.menu-list button {
+  width: 100%; text-align: left; background: none; border: 0; padding: 10px 12px; font-size: 16px;
+  color: var(--ink); border-radius: 4px; display: flex; gap: 10px; align-items: center;
+}
+.menu-list button:hover, .menu-list button:focus { background: var(--paper-dark); outline: none; }
+
+#loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #1f3a24; color: #fbeed2; font-size: 20px; }
+#debug { position: fixed; left: 12px; top: 56px; max-width: 60vw; max-height: 50vh; overflow: auto; background: rgba(0,0,0,.8); color: #9f9; font-size: 12px; padding: 8px; margin: 0; }
+
+@media (max-width: 600px) {
+  #hint { font-size: 11px; }
+  .dlg-text { font-size: 15px; }
+}
