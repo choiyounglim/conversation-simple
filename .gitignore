@@ -5,3 +5,6 @@ temp/
 coverage
 .env
 npm-debug.log
+# 유료 에셋 원본은 저장소에 올리지 않음 (라이선스: 재배포 금지)
+village/assets/*
+!village/assets/.gitkeep
