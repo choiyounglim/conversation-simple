@@ -139,7 +139,7 @@ input, select { font: 1rem var(--f-body); padding: 9px 11px; border-radius: 10px
       </div>
       <label for="f-hint">기억 문장<input id="f-hint" placeholder="달에 핀 꽃까지 점프하는 돌고래"></label>
       <button class="big yes" type="submit">카드 만들기</button>
-      <p class="note">만든 카드는 이 브라우저에 저장돼요.</p>
+      <p class="note">로그인한 claude.ai 계정에 저장되어 휴대폰과 PC에서 같이 볼 수 있어요.</p>
     </form>
   </section>
 </div>
@@ -209,7 +209,8 @@ function renderList() {
   const cards = all();
   $("grid").innerHTML = cards.map(cardHTML).join("");
   const k = cards.filter(c => known.has(c.word)).length;
-  $("stats").innerHTML = `단어 ${cards.length}개 · 외운 단어 <b>${k}</b>개`;
+  const where = col ? "☁️ 내 계정에 저장 · 휴대폰과 PC에서 같이 보여요" : "이 기기에만 저장돼요";
+  $("stats").innerHTML = `단어 ${cards.length}개 · 외운 단어 <b>${k}</b>개 · ${where}`;
 }
 
 // 카드 학습: 아직 못 외운 카드부터 섞어서
@@ -242,8 +243,8 @@ function renderStudy() {
       <button class="big yes" id="got">외웠어요</button>
     </div>`;
   if (!revealed) $("reveal").onclick = () => { revealed = true; renderStudy(); speak(c.word); };
-  $("nope").onclick = () => { known.delete(c.word); save(KEY_KNOWN, [...known]); next(); };
-  $("got").onclick = () => { known.add(c.word); save(KEY_KNOWN, [...known]); next(); };
+  $("nope").onclick = () => { known.delete(c.word); saveKnown(); next(); };
+  $("got").onclick = () => { known.add(c.word); saveKnown(); next(); };
 }
 function next() { pos++; revealed = false; renderStudy(); }
 
@@ -288,7 +289,7 @@ document.querySelector("nav").onclick = e => { const v = e.target.closest("butto
 document.addEventListener("click", e => {
   const say = e.target.closest("[data-say]"); if (say) speak(say.dataset.say);
   const del = e.target.closest("[data-del]");
-  if (del) { custom = custom.filter(c => c.id !== del.dataset.del); save(KEY_CARDS, custom); renderList(); toast("카드를 삭제했어요"); }
+  if (del) { removeCard(del.dataset.del); renderList(); toast("카드를 삭제했어요"); }
 });
 
 // 사진은 작게 줄여서 저장
@@ -317,13 +318,64 @@ $("addForm").addEventListener("submit", async e => {
   const file = $("f-photo").files[0];
   let photo = "";
   if (file) { try { photo = await shrink(file); } catch { toast("사진을 읽지 못했어요. 다른 사진을 골라 주세요"); return; } }
-  custom.push({ id: String(Date.now()), custom: true, word: f("f-word"), mean: f("f-mean"), ipa: f("f-ipa"),
-    emoji: f("f-emoji") || "🖼️", sound: f("f-sound"), hint: f("f-hint"), photo });
-  const ok = save(KEY_CARDS, custom);
+  const card = { id: "card-" + Date.now(), custom: true, word: f("f-word"), mean: f("f-mean"), ipa: f("f-ipa"),
+    emoji: f("f-emoji") || "🖼️", sound: f("f-sound"), hint: f("f-hint"), photo };
+  custom.push(card);
+  const ok = await addCard(card);
   e.target.reset();
-  toast(ok ? "카드를 만들었어요" : "카드를 만들었지만 이 브라우저에 저장되지 않아요");
+  toast(ok ? "카드를 만들었어요" : "카드를 만들었지만 저장하지 못했어요");
   show("list");
 });
 
+// 저장: 계정 동기화(db)가 되면 계정에, 아니면 이 브라우저에
+let col = null, writes = Promise.resolve();
+const queue = fn => (writes = writes.then(fn).catch(err => { toast(err?.code === "quota_exceeded" ? "저장 공간이 가득 찼어요. 카드를 몇 개 지워 주세요" : "저장하지 못했어요. 잠시 후 다시 해 주세요"); return false; }));
+function saveKnown() {
+  if (col) queue(() => col.doc("progress").set({ known: [...known] }));
+  else save(KEY_KNOWN, [...known]);
+}
+async function addCard(card) {
+  if (!col) return save(KEY_CARDS, custom);
+  const { id, ...body } = card;
+  return (await queue(() => col.doc(id).set({ kind: "card", ...body }).then(() => true))) === true;
+}
+function removeCard(id) {
+  custom = custom.filter(c => c.id !== id);
+  if (col) queue(() => col.doc(id).delete());
+  else save(KEY_CARDS, custom);
+}
+async function connect() {
+  if (!window.claude?.use) return;
+  const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+  const uid = db && user ? await user.id() : null;
+  if (!uid) return;
+  col = db.collection("data/users/" + uid);
+  // 이 기기에만 있던 카드와 기록을 계정으로 옮기기
+  const localCards = load(KEY_CARDS, []), localKnown = load(KEY_KNOWN, []);
+  if (localCards.length || localKnown.length) {
+    const prog = await col.doc("progress").get().catch(() => null);
+    const merged = new Set([...(prog?.data()?.known || []), ...localKnown]);
+    await queue(async () => {
+      for (const c of localCards) { const { id, ...body } = c; await col.doc(String(id).startsWith("card-") ? id : "card-" + id).set({ kind: "card", ...body }); }
+      if (localKnown.length) await col.doc("progress").set({ known: [...merged] });
+      try { localStorage.removeItem(KEY_CARDS); localStorage.removeItem(KEY_KNOWN); } catch {}
+    });
+  }
+  col.onSnapshot(snap => {
+    const cards = [];
+    let k = [];
+    snap.docs.forEach(d => {
+      const v = d.data();
+      if (d.id === "progress") k = v.known || [];
+      else if (v.kind === "card") cards.push({ ...v, id: d.id, custom: true });
+    });
+    custom = cards.sort((a, b) => a.id.localeCompare(b.id));
+    known = new Set(k);
+    if (!$("v-list").hidden) renderList();
+  }, () => { col = null; renderList(); });
+  renderList();
+}
+
 renderList();
+connect();
 </script>
